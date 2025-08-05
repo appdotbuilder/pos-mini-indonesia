@@ -1,16 +1,29 @@
 
+import { db } from '../db';
+import { cashDrawerTable } from '../db/schema';
 import { type CreateCashDrawerInput, type CashDrawer } from '../schema';
 
-export async function createCashDrawerEntry(input: CreateCashDrawerInput, userId: number): Promise<CashDrawer> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is recording cash drawer movements (masuk/keluar/saldo_awal)
-    // for proper cash flow tracking and end-of-day reconciliation.
-    return Promise.resolve({
-        id: 0, // Placeholder ID
+export const createCashDrawerEntry = async (input: CreateCashDrawerInput, userId: number): Promise<CashDrawer> => {
+  try {
+    // Insert cash drawer entry record
+    const result = await db.insert(cashDrawerTable)
+      .values({
         type: input.type,
-        amount: input.amount,
+        amount: input.amount.toString(), // Convert number to string for numeric column
         description: input.description,
-        user_id: userId,
-        created_at: new Date()
-    } as CashDrawer);
-}
+        user_id: userId
+      })
+      .returning()
+      .execute();
+
+    // Convert numeric fields back to numbers before returning
+    const entry = result[0];
+    return {
+      ...entry,
+      amount: parseFloat(entry.amount) // Convert string back to number
+    };
+  } catch (error) {
+    console.error('Cash drawer entry creation failed:', error);
+    throw error;
+  }
+};
